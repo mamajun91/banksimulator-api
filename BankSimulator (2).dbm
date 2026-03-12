@@ -1,0 +1,398 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dbmodel pgmodeler-ver="1.0.0" last-position="0,0" last-zoom="1"
+	 default-schema="public" default-owner="postgres"
+	 layers="Default layer"
+	 active-layers="0"
+	 layer-name-colors="#000000"
+	 layer-rect-colors="#b4b4b4"
+	 show-layer-names="false" show-layer-rects="false">
+
+<database name="banksimulator" encoding="UTF8" lc-collate="fr_FR.UTF-8" lc-ctype="fr_FR.UTF-8" is-template="false" allow-conns="true">
+</database>
+
+<schema name="public" layers="0" fill-color="#e2eef6" sql-disabled="true">
+</schema>
+
+<usertype name="role_enum" configuration="enumeration">
+	<schema name="public"/>
+	<enumeration label="ADMIN"/>
+	<enumeration label="CLIENT"/>
+	<enumeration label="CONSEILLER"/>
+	<enumeration label="AUDITEUR"/>
+</usertype>
+
+<usertype name="statut_utilisateur_enum" configuration="enumeration">
+	<schema name="public"/>
+	<enumeration label="ACTIF"/>
+	<enumeration label="BLOQUE"/>
+	<enumeration label="SUSPENDU"/>
+</usertype>
+
+<usertype name="type_compte_enum" configuration="enumeration">
+	<schema name="public"/>
+	<enumeration label="COURANT"/>
+	<enumeration label="EPARGNE"/>
+</usertype>
+
+<usertype name="statut_compte_enum" configuration="enumeration">
+	<schema name="public"/>
+	<enumeration label="ACTIF"/>
+	<enumeration label="BLOQUE"/>
+	<enumeration label="CLOTURE"/>
+</usertype>
+
+<usertype name="type_transaction_enum" configuration="enumeration">
+	<schema name="public"/>
+	<enumeration label="VIREMENT"/>
+	<enumeration label="DEPOT"/>
+	<enumeration label="RETRAIT"/>
+</usertype>
+
+<usertype name="statut_transaction_enum" configuration="enumeration">
+	<schema name="public"/>
+	<enumeration label="PENDING"/>
+	<enumeration label="COMPLETED"/>
+	<enumeration label="FAILED"/>
+	<enumeration label="CANCELLED"/>
+</usertype>
+
+<usertype name="type_piece_enum" configuration="enumeration">
+	<schema name="public"/>
+	<enumeration label="CNI"/>
+	<enumeration label="PASSEPORT"/>
+	<enumeration label="TITRE_SEJOUR"/>
+</usertype>
+
+<usertype name="entite_cible_enum" configuration="enumeration">
+	<schema name="public"/>
+	<enumeration label="COMPTE"/>
+	<enumeration label="TRANSACTION"/>
+	<enumeration label="UTILISATEUR"/>
+	<enumeration label="PIECE_IDENTITE"/>
+</usertype>
+
+<table name="action" layers="0" collapse-mode="2" max-obj-count="3" z-value="0">
+	<schema name="public"/>
+	<position x="900" y="50"/>
+	<column name="id" not-null="true" default-value="gen_random_uuid()">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="code" not-null="true">
+		<type name="varchar" length="100"/>
+	</column>
+	<column name="libelle" not-null="true">
+		<type name="varchar" length="255"/>
+	</column>
+	<constraint name="pk_action" type="pk-constr" table="public.action">
+		<columns names="id" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="uq_action_code" type="uq-constr" table="public.action">
+		<columns names="code" ref-type="src-columns"/>
+	</constraint>
+</table>
+
+<table name="utilisateur" layers="0" collapse-mode="2" max-obj-count="18" z-value="0">
+	<schema name="public"/>
+	<position x="50" y="50"/>
+	<column name="id" not-null="true" default-value="gen_random_uuid()">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="nom" not-null="true">
+		<type name="varchar" length="100"/>
+	</column>
+	<column name="prenom" not-null="true">
+		<type name="varchar" length="100"/>
+	</column>
+	<column name="email" not-null="true">
+		<type name="varchar" length="255"/>
+	</column>
+	<column name="telephone">
+		<type name="varchar" length="20"/>
+	</column>
+	<column name="date_naissance" not-null="true">
+		<type name="date" length="0"/>
+	</column>
+	<column name="adresse_rue" not-null="true">
+		<type name="varchar" length="255"/>
+	</column>
+	<column name="adresse_ville" not-null="true">
+		<type name="varchar" length="100"/>
+	</column>
+	<column name="code_postal" not-null="true">
+		<type name="varchar" length="10"/>
+	</column>
+	<column name="pays" not-null="true" default-value="'FR'">
+		<type name="char" length="2"/>
+	</column>
+	<column name="mot_de_passe_hash" not-null="true">
+		<type name="varchar" length="255"/>
+	</column>
+	<column name="role" not-null="true">
+		<type name="role_enum" length="0"/>
+	</column>
+	<column name="statut" not-null="true" default-value="'ACTIF'">
+		<type name="statut_utilisateur_enum" length="0"/>
+	</column>
+	<column name="nb_echecs_auth" not-null="true" default-value="0">
+		<type name="integer" length="0"/>
+	</column>
+	<column name="date_creation" not-null="true" default-value="now()">
+		<type name="timestamp" length="0"/>
+	</column>
+	<column name="date_modification" not-null="true" default-value="now()">
+		<type name="timestamp" length="0"/>
+	</column>
+	<column name="version" not-null="true" default-value="0">
+		<type name="bigint" length="0"/>
+	</column>
+	<constraint name="pk_utilisateur" type="pk-constr" table="public.utilisateur">
+		<columns names="id" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="uq_utilisateur_email" type="uq-constr" table="public.utilisateur">
+		<columns names="email" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="ck_utilisateur_age" type="ck-constr" table="public.utilisateur">
+		<expression><![CDATA[date_naissance <= current_date - interval '18 years']]></expression>
+	</constraint>
+	<constraint name="ck_utilisateur_echecs" type="ck-constr" table="public.utilisateur">
+		<expression><![CDATA[nb_echecs_auth >= 0 AND nb_echecs_auth <= 3]]></expression>
+	</constraint>
+</table>
+
+<table name="piece_identite" layers="0" collapse-mode="2" max-obj-count="6" z-value="0">
+	<schema name="public"/>
+	<position x="50" y="500"/>
+	<column name="id" not-null="true" default-value="gen_random_uuid()">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="type_piece" not-null="true">
+		<type name="type_piece_enum" length="0"/>
+	</column>
+	<column name="numero" not-null="true">
+		<type name="varchar" length="50"/>
+	</column>
+	<column name="date_expiration" not-null="true">
+		<type name="date" length="0"/>
+	</column>
+	<column name="date_creation" not-null="true" default-value="now()">
+		<type name="timestamp" length="0"/>
+	</column>
+	<constraint name="pk_piece_identite" type="pk-constr" table="public.piece_identite">
+		<columns names="id" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="uq_piece_numero" type="uq-constr" table="public.piece_identite">
+		<columns names="numero" ref-type="src-columns"/>
+	</constraint>
+</table>
+
+<table name="compte_bancaire" layers="0" collapse-mode="2" max-obj-count="15" z-value="0">
+	<schema name="public"/>
+	<position x="450" y="50"/>
+	<column name="id" not-null="true" default-value="gen_random_uuid()">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="iban" not-null="true">
+		<type name="varchar" length="34"/>
+	</column>
+	<column name="bic" not-null="true">
+		<type name="varchar" length="11"/>
+	</column>
+	<column name="type_compte" not-null="true">
+		<type name="type_compte_enum" length="0"/>
+	</column>
+	<column name="solde" not-null="true" default-value="0.00">
+		<type name="numeric" length="15" precision="2"/>
+	</column>
+	<column name="devise" not-null="true" default-value="'EUR'">
+		<type name="char" length="3"/>
+	</column>
+	<column name="decouvert_autorise" not-null="true" default-value="0.00">
+		<type name="numeric" length="15" precision="2"/>
+	</column>
+	<column name="taux_interet" default-value="0.0000">
+		<type name="numeric" length="5" precision="4"/>
+	</column>
+	<column name="statut" not-null="true" default-value="'ACTIF'">
+		<type name="statut_compte_enum" length="0"/>
+	</column>
+	<column name="date_ouverture" not-null="true" default-value="current_date">
+		<type name="date" length="0"/>
+	</column>
+	<column name="date_cloture">
+		<type name="date" length="0"/>
+	</column>
+	<column name="date_modification" not-null="true" default-value="now()">
+		<type name="timestamp" length="0"/>
+	</column>
+	<column name="version" not-null="true" default-value="0">
+		<type name="bigint" length="0"/>
+	</column>
+	<constraint name="pk_compte_bancaire" type="pk-constr" table="public.compte_bancaire">
+		<columns names="id" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="uq_compte_iban" type="uq-constr" table="public.compte_bancaire">
+		<columns names="iban" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="ck_compte_solde" type="ck-constr" table="public.compte_bancaire">
+		<expression><![CDATA[solde >= -decouvert_autorise]]></expression>
+	</constraint>
+</table>
+
+<table name="transaction" layers="0" collapse-mode="2" max-obj-count="15" z-value="0">
+	<schema name="public"/>
+	<position x="450" y="450"/>
+	<column name="id" not-null="true" default-value="gen_random_uuid()">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="reference" not-null="true">
+		<type name="varchar" length="35"/>
+	</column>
+	<column name="type_transaction" not-null="true">
+		<type name="type_transaction_enum" length="0"/>
+	</column>
+	<column name="montant" not-null="true">
+		<type name="numeric" length="15" precision="2"/>
+	</column>
+	<column name="devise" not-null="true" default-value="'EUR'">
+		<type name="char" length="3"/>
+	</column>
+	<column name="libelle">
+		<type name="varchar" length="140"/>
+	</column>
+	<column name="statut" not-null="true" default-value="'PENDING'">
+		<type name="statut_transaction_enum" length="0"/>
+	</column>
+	<column name="iban_externe">
+		<type name="varchar" length="34"/>
+	</column>
+	<column name="date_execution" not-null="true" default-value="now()">
+		<type name="timestamp" length="0"/>
+	</column>
+	<column name="date_valeur">
+		<type name="date" length="0"/>
+	</column>
+	<column name="message_erreur">
+		<type name="varchar" length="255"/>
+	</column>
+	<column name="version" not-null="true" default-value="0">
+		<type name="bigint" length="0"/>
+	</column>
+	<constraint name="pk_transaction" type="pk-constr" table="public.transaction">
+		<columns names="id" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="uq_transaction_reference" type="uq-constr" table="public.transaction">
+		<columns names="reference" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="ck_transaction_montant" type="ck-constr" table="public.transaction">
+		<expression><![CDATA[montant >= 0.01]]></expression>
+	</constraint>
+</table>
+
+<table name="audit_trail" layers="0" collapse-mode="2" max-obj-count="11" z-value="0">
+	<schema name="public"/>
+	<position x="900" y="450"/>
+	<column name="id" not-null="true" default-value="gen_random_uuid()">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="entite_cible" not-null="true">
+		<type name="entite_cible_enum" length="0"/>
+	</column>
+	<column name="entite_id">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="ancien_etat">
+		<type name="jsonb" length="0"/>
+	</column>
+	<column name="nouvel_etat">
+		<type name="jsonb" length="0"/>
+	</column>
+	<column name="endpoint">
+		<type name="varchar" length="200"/>
+	</column>
+	<column name="adresse_ip">
+		<type name="varchar" length="45"/>
+	</column>
+	<column name="user_agent">
+		<type name="varchar" length="500"/>
+	</column>
+	<column name="timestamp" not-null="true" default-value="now()">
+		<type name="timestamp" length="0"/>
+	</column>
+	<constraint name="pk_audit_trail" type="pk-constr" table="public.audit_trail">
+		<columns names="id" ref-type="src-columns"/>
+	</constraint>
+</table>
+
+<relationship name="fk_piece_utilisateur" type="rel1n" layers="0"
+	 src-col-pattern="{sc}" pk-pattern="{dt}_pk" uq-pattern="{dt}_uq"
+	 src-fk-pattern="{st}_fk"
+	 custom-color="#2e7d32"
+	 src-table="public.utilisateur"
+	 dst-table="public.piece_identite"
+	 src-required="true" dst-required="false">
+</relationship>
+
+<relationship name="fk_compte_titulaire" type="rel1n" layers="0"
+	 src-col-pattern="{sc}" pk-pattern="{dt}_pk" uq-pattern="{dt}_uq"
+	 src-fk-pattern="{st}_fk"
+	 custom-color="#1565c0"
+	 src-table="public.utilisateur"
+	 dst-table="public.compte_bancaire"
+	 src-required="true" dst-required="false">
+</relationship>
+
+<relationship name="fk_compte_conseiller" type="rel1n" layers="0"
+	 src-col-pattern="{sc}" pk-pattern="{dt}_pk" uq-pattern="{dt}_uq"
+	 src-fk-pattern="{st}_fk"
+	 custom-color="#546e7a"
+	 src-table="public.utilisateur"
+	 dst-table="public.compte_bancaire"
+	 src-required="false" dst-required="false">
+</relationship>
+
+<relationship name="fk_transaction_debiteur" type="rel1n" layers="0"
+	 src-col-pattern="{sc}" pk-pattern="{dt}_pk" uq-pattern="{dt}_uq"
+	 src-fk-pattern="{st}_fk"
+	 custom-color="#e65100"
+	 src-table="public.compte_bancaire"
+	 dst-table="public.transaction"
+	 src-required="false" dst-required="false">
+</relationship>
+
+<relationship name="fk_transaction_crediteur" type="rel1n" layers="0"
+	 src-col-pattern="{sc}" pk-pattern="{dt}_pk" uq-pattern="{dt}_uq"
+	 src-fk-pattern="{st}_fk"
+	 custom-color="#b71c1c"
+	 src-table="public.compte_bancaire"
+	 dst-table="public.transaction"
+	 src-required="false" dst-required="false">
+</relationship>
+
+<relationship name="fk_transaction_initiateur" type="rel1n" layers="0"
+	 src-col-pattern="{sc}" pk-pattern="{dt}_pk" uq-pattern="{dt}_uq"
+	 src-fk-pattern="{st}_fk"
+	 custom-color="#6a1b9a"
+	 src-table="public.utilisateur"
+	 dst-table="public.transaction"
+	 src-required="true" dst-required="false">
+</relationship>
+
+<relationship name="fk_audit_utilisateur" type="rel1n" layers="0"
+	 src-col-pattern="{sc}" pk-pattern="{dt}_pk" uq-pattern="{dt}_uq"
+	 src-fk-pattern="{st}_fk"
+	 custom-color="#546e7a"
+	 src-table="public.utilisateur"
+	 dst-table="public.audit_trail"
+	 src-required="true" dst-required="false">
+</relationship>
+
+<relationship name="fk_audit_action" type="rel1n" layers="0"
+	 src-col-pattern="{sc}" pk-pattern="{dt}_pk" uq-pattern="{dt}_uq"
+	 src-fk-pattern="{st}_fk"
+	 custom-color="#00acc1"
+	 src-table="public.action"
+	 dst-table="public.audit_trail"
+	 src-required="true" dst-required="false">
+</relationship>
+
+</dbmodel>

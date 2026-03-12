@@ -1,0 +1,128 @@
+@startuml
+title BankSimulator — Diagramme de Cas d'Usage
+
+left to right direction
+
+actor Admin
+actor Client
+actor Conseiller
+actor Auditeur
+actor Systeme
+
+actor Auditeur #6a1b9a
+actor Systeme #37474f
+
+Auditeur -[hidden]-> Systeme
+
+rectangle "BankSimulator" {
+
+    package "Authentification" {
+        usecase "S'authentifier" as UC_AUTH
+        usecase "Bloquer utilisateur\naprès 3 échecs" as UC_BLOCK_AUTO
+    }
+
+    package "Gestion Utilisateurs" {
+        usecase "Créer un utilisateur" as UC_CREATE_USER
+        usecase "Modifier un utilisateur" as UC_UPDATE_USER
+        usecase "Supprimer un utilisateur" as UC_DELETE_USER
+        usecase "Lister les utilisateurs" as UC_LIST_USER
+        usecase "Bloquer un utilisateur" as UC_BLOCK_USER
+        usecase "Débloquer un utilisateur" as UC_UNBLOCK_USER
+        usecase "Vérifier solde = 0" as UC_CHECK_SOLDE_USER
+	usecase "Ajouter pièce d'identité" as UC_ADD_PIECE
+    }
+
+    package "Gestion Comptes" {
+        usecase "Créer un compte" as UC_CREATE_COMPTE
+        usecase "Lister les comptes" as UC_LIST_COMPTE
+        usecase "Bloquer un compte" as UC_BLOCK_COMPTE
+        usecase "Débloquer un compte" as UC_UNBLOCK_COMPTE
+        usecase "Clôturer un compte" as UC_CLOSE_COMPTE
+        usecase "Modifier le découvert" as UC_UPDATE_DECOUVERT
+        usecase "Consulter ses comptes" as UC_VIEW_COMPTE
+        usecase "Vérifier solde = 0" as UC_CHECK_SOLDE_COMPTE
+        usecase "Générer IBAN" as UC_GEN_IBAN
+    }
+
+    package "Transactions" {
+        usecase "Effectuer un virement" as UC_VIREMENT
+        usecase "Effectuer un dépôt" as UC_DEPOT
+        usecase "Effectuer un retrait" as UC_RETRAIT
+        usecase "Annuler transaction PENDING" as UC_CANCEL
+        usecase "Consulter historique" as UC_HISTORY
+        usecase "Vérifier solde suffisant" as UC_CHECK_SOLDE_TX
+        usecase "Générer référence ISO 20022" as UC_GEN_REF
+    }
+
+    package "Audit" {
+        usecase "Consulter AuditTrail" as UC_AUDIT
+        usecase "Consulter transactions" as UC_VIEW_TX
+        usecase "Consulter utilisateurs" as UC_VIEW_USERS
+        usecase "Créer entrée AuditTrail" as UC_CREATE_AUDIT
+    }
+
+    package "Gestion Actions" {
+        usecase "Gérer table Action" as UC_ACTION
+    }
+}
+
+' ── ADMIN ──
+Admin --> UC_CREATE_USER
+Admin --> UC_UPDATE_USER
+Admin --> UC_DELETE_USER
+Admin --> UC_LIST_USER
+Admin --> UC_BLOCK_USER
+Admin --> UC_UNBLOCK_USER
+Admin --> UC_LIST_COMPTE
+Admin --> UC_BLOCK_COMPTE
+Admin --> UC_UNBLOCK_COMPTE
+Admin --> UC_CLOSE_COMPTE
+Admin --> UC_UPDATE_DECOUVERT
+Admin --> UC_CANCEL
+Admin --> UC_AUDIT
+Admin --> UC_ACTION
+Admin --> UC_ADD_PIECE
+
+' ── CLIENT ──
+Client --> UC_AUTH
+Client --> UC_VIEW_COMPTE
+Client --> UC_VIREMENT
+Client --> UC_DEPOT
+Client --> UC_RETRAIT
+Client --> UC_CANCEL
+Client --> UC_HISTORY
+
+' ── CONSEILLER ──
+Conseiller --> UC_VIEW_COMPTE
+Conseiller --> UC_LIST_COMPTE
+Conseiller --> UC_CREATE_COMPTE
+Conseiller --> UC_UPDATE_DECOUVERT
+Conseiller --> UC_VIREMENT
+Conseiller --> UC_ADD_PIECE
+
+' ── AUDITEUR ──
+Auditeur --> UC_AUDIT
+Auditeur --> UC_VIEW_TX
+Auditeur --> UC_VIEW_USERS
+
+' ── SYSTEME ──
+Systeme --> UC_GEN_IBAN
+Systeme --> UC_GEN_REF
+Systeme --> UC_CREATE_AUDIT
+Systeme --> UC_BLOCK_AUTO
+
+' ── INCLUDE ──
+UC_VIREMENT ..> UC_CHECK_SOLDE_TX : <<include>>
+UC_VIREMENT ..> UC_GEN_REF : <<include>>
+UC_VIREMENT ..> UC_CREATE_AUDIT : <<include>>
+UC_DEPOT ..> UC_CREATE_AUDIT : <<include>>
+UC_RETRAIT ..> UC_CHECK_SOLDE_TX : <<include>>
+UC_RETRAIT ..> UC_CREATE_AUDIT : <<include>>
+UC_CREATE_COMPTE ..> UC_GEN_IBAN : <<include>>
+
+' ── EXTEND ──
+UC_AUTH <.. UC_BLOCK_AUTO : <<extend>>
+UC_DELETE_USER <.. UC_CHECK_SOLDE_USER : <<extend>>
+UC_CLOSE_COMPTE <.. UC_CHECK_SOLDE_COMPTE : <<extend>>
+
+@enduml

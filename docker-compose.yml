@@ -23,5 +23,13 @@ services:
       QUARKUS_DATASOURCE_USERNAME: bank
       QUARKUS_DATASOURCE_PASSWORD: bank
 
+  adminer:
+    image: adminer
+    container_name: adminer
+    ports:
+      - "8083:8080"
+    depends_on:
+      - banksimulator-db
+
 volumes:
   pgdata:

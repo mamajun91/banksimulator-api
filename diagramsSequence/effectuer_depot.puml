@@ -1,0 +1,65 @@
+@startuml
+
+title Effectuer un dépôt
+
+participant "Client" as Client
+participant "API REST" as API
+participant "TransactionService" as Service
+participant "CompteBancaireRepository" as CompteRepo
+participant "TransactionRepository" as Repository
+participant "AuditTrailService" as Audit
+participant "AuditTrailrepository" as AuditRepo
+participant "PostgreSQL" as DB
+
+Client -> API :  POST /api/v1/comptes/{idCompte}/depot\n{Authorization: Bearer Token}
+
+API -> API : SmallRye JWT vérifie\nla signature du token
+alt Token invalide ou expiré
+    API --> Client : 401 Unauthorized
+end
+
+alt Rôle != CLIENT (@RolesAllowed)
+    API --> Client : 403 Forbidden
+end
+
+API -> API : Validation @Valid DTO
+alt Validation échouée
+    API --> Client : 400 Bad Request\n{erreurs de validation}
+end
+
+API -> Service : effectuer_depot(dto)
+Service -> CompteRepo : findById(idCompte)
+CompteRepo -> DB : SELECT FROM compte_bancaire \nWHERE idCompte = ?
+DB --> CompteRepo : resultat
+CompteRepo -> Service : Optional<CompteBancaire>
+
+alt le compte n'existe pas
+    Service --> API : CompteNotFoundException
+    API --> Client : 404 Not Found\n{compte introuvable}
+end
+
+alt le statut != ACTIF
+	Service --> API : CompteNonActifException
+	API --> Client : 422 Non Actif\n{Compte non actif}
+end 
+
+Service -> Service : ConstruireTransaction(dto, compte)
+Service -> Repository : save(transaction)
+Repository -> DB : INSERT INTO transaction
+DB --> Repository : transaction persistée
+Repository --> Service : transaction
+
+Service -> Service : nouveauSolde = solde + montant
+Service -> CompteRepo : save(compte)
+CompteRepo -> DB : UPDATE compte_bancaire\nSet solde = ?\nWHERE idCompte = ?
+DB --> CompteRepo : compte persisté
+CompteRepo --> Service : compte mise à jour
+
+Service -> Audit : tracer(transaction,\nACTION_EFFECTUER_DEPOT,\nEXPECTED_STATE)
+Audit -> AuditRepo : save(auditTrail)
+AuditRepo -> DB : INSERT INTO audit_trail
+
+Service --> API : transactionDTO
+API --> Client : 201 Created\n{id, montant, date_exécution, statut}
+
+@enduml

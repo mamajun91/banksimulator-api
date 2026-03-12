@@ -1,0 +1,56 @@
+@startuml
+
+title Créer un utilisateur
+
+actor Admin
+participant "API REST" as API
+participant "UtilisateurService" as Service
+participant "UtilisateurRepository" as Repository
+participant "AuditTrailService" as Audit
+participant "AuditTrailRepository" as AuditRepo
+database "PostgreSQL" as DB
+
+Admin -> API : POST /api/v1/utilisateurs\n{Authorization: Bearer token}
+
+API -> API : SmallRye JWT vérifie\nla signature du token
+alt Token invalide ou expiré
+    API --> Admin : 401 Unauthorized
+end
+
+alt Rôle != ADMIN (@RolesAllowed)
+    API --> Admin : 403 Forbidden
+end
+
+API -> API : Validation @Valid DTO
+alt Validation échouée
+    API --> Admin : 400 Bad Request\n{erreurs de validation}
+end
+
+API -> Service : creerUtilisateur(dto)
+
+Service -> Repository : existsByEmail(email)
+Repository -> DB : SELECT FROM utilisateur\nWHERE email = ?
+DB --> Repository : résultat
+Repository --> Service : boolean
+
+alt Email déjà existant
+    Service --> API : EmailDejaUtiliseException
+    API --> Admin : 409 Conflict\n{email déjà utilisé}
+end
+
+Service -> Service : hasherMotDePasse(BCrypt)
+Service -> Service : construireEntite(dto)
+
+Service -> Repository : save(utilisateur)
+Repository -> DB : INSERT INTO utilisateur
+DB --> Repository : utilisateur persisté
+Repository --> Service : utilisateur
+
+Service -> Audit : tracer(utilisateur.id,\nACTION_CREER_UTILISATEUR,\nEXPECTED_STATE)
+Audit -> AuditRepo : save(auditTrail)
+AuditRepo -> DB : INSERT INTO audit_trail
+
+Service --> API : UtilisateurResponseDTO
+API --> Admin : 201 Created\n{id, nom, prenom, email, role, statut}
+
+@enduml

@@ -1,0 +1,53 @@
+@startuml
+
+title Ajouter une pièce d'identité
+
+actor Admin
+participant "API REST" as API
+participant "PieceIdentiteService" as Service
+participant "UtilisateurRepository" as UtilisateurRepo
+participant "PieceIdentiteRepository" as Repository
+participant "AuditTrailService" as Audit
+participant "AuditTrailRepository" as AuditRepo
+database "PostgreSQL" as DB
+
+Admin -> API : POST /api/v1/utilisateurs/{id}/pieces-identite\n{Authorization: Bearer token}
+
+API -> API : SmallRye JWT vérifie\nla signature du token
+alt Token invalide ou expiré
+    API --> Admin : 401 Unauthorized
+end
+
+alt Rôle != ADMIN (@RolesAllowed)
+    API --> Admin : 403 Forbidden
+end
+
+API -> Service : ajouterPieceIdentite(pieceIdentite, idUtilisateur)
+
+Service -> UtilisateurRepo : findById(idUtilisateur)
+UtilisateurRepo -> DB : SELECT FROM utilisateur\nWHERE id = ?
+DB --> UtilisateurRepo : utilisateur
+UtilisateurRepo --> Service : Optional<Utilisateur>
+
+alt Utilisateur non trouvé
+    Service --> API : UtilisateurNotFoundException
+    API --> Admin : 404 Not Found\n{utilisateur introuvable}
+end
+
+Service -> Service : construireEntite(dto, utilisateur)
+
+Service -> Repository : save(pieceIdentite)
+Repository -> DB : INSERT INTO piece_identite
+DB --> Repository : pieceIdentite persistée
+Repository --> Service : pieceIdentite
+
+Service -> Service : construireResponseDTO(pieceIdentite)
+
+Service -> Audit : tracer(utilisateur.id,\nACTION_AJOUTER_PIECE_IDENTITE,\nENTITE_CIBLE_PIECE_IDENTITE)
+Audit -> AuditRepo : save(auditTrail)
+AuditRepo -> DB : INSERT INTO audit_trail
+
+Service --> API : PieceIdentiteResponseDTO
+API --> Admin : 201 Created\n{id, type, numero, dateExpiration}
+
+@enduml

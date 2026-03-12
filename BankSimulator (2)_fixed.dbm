@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+CAUTION: Do not modify this file unless you know what you are doing.
+ Unexpected results may occur if the code is changed deliberately.
+-->
+<dbmodel pgmodeler-ver="1.1.0-beta1" use-changelog="false" last-position="0,0" last-zoom="1" max-obj-count="9"
+	 default-owner="postgres"
+	 layers="Default layer"
+	 active-layers="0"
+	 layer-name-colors="#000000"
+	 layer-rect-colors="#b4b4b4"
+	 show-layer-names="false" show-layer-rects="false">
+<database name="banksimulator" encoding="UTF8" lc-collate="fr_FR.UTF-8" lc-ctype="fr_FR.UTF-8" is-template="false" allow-conns="true">
+</database>
+
+<schema name="public" layers="0" fill-color="#e2eef6" name-color="#000000" sql-disabled="true">
+</schema>
+
+<usertype name="role_enum" configuration="enumeration">
+	<schema name="public"/>
+	<enumeration label="ADMIN"/>
+	<enumeration label="CLIENT"/>
+	<enumeration label="CONSEILLER"/>
+	<enumeration label="AUDITEUR"/>
+</usertype>
+
+<usertype name="statut_utilisateur_enum" configuration="enumeration">
+	<schema name="public"/>
+	<enumeration label="ACTIF"/>
+	<enumeration label="BLOQUE"/>
+	<enumeration label="SUSPENDU"/>
+</usertype>
+
+<usertype name="type_compte_enum" configuration="enumeration">
+	<schema name="public"/>
+	<enumeration label="COURANT"/>
+	<enumeration label="EPARGNE"/>
+</usertype>
+
+<usertype name="statut_compte_enum" configuration="enumeration">
+	<schema name="public"/>
+	<enumeration label="ACTIF"/>
+	<enumeration label="BLOQUE"/>
+	<enumeration label="CLOTURE"/>
+</usertype>
+
+<usertype name="type_transaction_enum" configuration="enumeration">
+	<schema name="public"/>
+	<enumeration label="VIREMENT"/>
+	<enumeration label="DEPOT"/>
+	<enumeration label="RETRAIT"/>
+</usertype>
+
+<usertype name="statut_transaction_enum" configuration="enumeration">
+	<schema name="public"/>
+	<enumeration label="PENDING"/>
+	<enumeration label="COMPLETED"/>
+	<enumeration label="FAILED"/>
+	<enumeration label="CANCELLED"/>
+</usertype>
+
+<usertype name="type_piece_enum" configuration="enumeration">
+	<schema name="public"/>
+	<enumeration label="CNI"/>
+	<enumeration label="PASSEPORT"/>
+	<enumeration label="TITRE_SEJOUR"/>
+</usertype>
+
+<usertype name="entite_cible_enum" configuration="enumeration">
+	<schema name="public"/>
+	<enumeration label="COMPTE"/>
+	<enumeration label="TRANSACTION"/>
+	<enumeration label="UTILISATEUR"/>
+	<enumeration label="PIECE_IDENTITE"/>
+</usertype>
+
+<table name="action" layers="0" collapse-mode="2" max-obj-count="3" z-value="0">
+	<schema name="public"/>
+	<position x="900" y="50"/>
+	<column name="id" not-null="true" default-value="gen_random_uuid()">
+		<type name="uuid" length="0"/>
+	</column>
+	<column name="code" not-null="true">
+		<type name="varchar" length="100"/>
+	</column>
+	<column name="libelle" not-null="true">
+		<type name="varchar" length="255"/>
+	</column>
+	<constraint name="pk_action" type="pk-constr" table="public.action">
+		<columns names="id" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="uq_action_code" type="uq-constr" table="public.action">
+		<columns names="code" ref-type="src-columns"/>
+	</constraint>
+</table>
+
+</dbmodel>

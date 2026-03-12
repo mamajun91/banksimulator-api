@@ -1,0 +1,59 @@
+@startuml
+
+title authentification
+
+participant "Utilisateur" as Utilisateur
+participant "API REST" as API
+participant "UtilisateurService" as Service
+participant "UtilisateurRepository" as Repository
+participant "AuditTrailService" as Audit
+participant "AuditTrailRepository" as AuditRepo
+participant "PostgreSQL" as DB
+
+Utilisateur -> API : POST /api/v1/authentification\n{Authorization: Bearer token}
+
+API -> API : Validation @Valid DTO
+alt Validation échouée
+    API --> Utilisateur : 400 Bad Request\n{erreurs de validation}
+end
+
+API -> Service : authentification(dto)
+Service -> Repository : finByUserEmail(email)
+Repository -> DB
+DB --> Repository : resultat
+Repository --> Service : Optional<Utilisateur>
+
+alt Utilisateur non trouvé
+    Service --> API : UtilisateurNotFoundException
+    API --> Utilisateur : 404 Not Found\n{utilisateur introuvable}
+end
+
+Service -> Service : BCrypt.verify(mdpSaisi, hash)
+
+alt mdpSaisi différent
+	Service --> API : mdpDifferentException
+	API --> Utilisateur : 401 Unauthorized\n{mdpSaisi ne correspond pas}
+	Service -> Service : incrementerEchecs()
+	Service -> Repository : save(utilisateur)
+end
+
+alt nb_echecs_auth >= 3
+    Service -> Service : bloquerUtilisateur()
+    Service -> Repository : save(utilisateur)
+    Service --> API : CompteBloqueException
+    API --> Utilisateur : 423 Locked\n{Trois tentatives de connexions échouées}
+    Service -> Audit : tracer(utilisateur.id,\nACTION_AUTH_ECHOUEE,\nENTITE_UTILISATEUR)
+    Audit -> AuditRepo : save(auditTrail)
+    AuditRepo -> DB : INSERT INTO audit_trail
+end
+	
+Service -> Service : genererJWT (utilisateur.id, utilisateur.role)
+Service -> Audit : tracer(utilisateur.id,\nACTION_AUTH_REUSSIE,\nENTITE_UTILISATEUR)
+Audit -> AuditRepo : save(auditTrail)
+AuditRepo -> DB : INSERT INTO audit_trail
+
+Service --> API : AuthResponseDTO\n{accessToken, tokenType, expiresIn, utilisateurId, role}
+API --> Utilisateur : 200 ok \n{accesToken, tokenType: Bearer, expiresIn}
+
+
+@enduml

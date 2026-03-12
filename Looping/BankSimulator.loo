@@ -1,0 +1,255 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Looping>
+  <Entites>
+
+    <Entite nom="Utilisateur" x="50" y="50">
+      <Proprietes>
+        <Propriete nom="id" type="UUID" identifiant="true"/>
+        <Propriete nom="nom" type="VARCHAR(100)"/>
+        <Propriete nom="prenom" type="VARCHAR(100)"/>
+        <Propriete nom="email" type="VARCHAR(255)"/>
+        <Propriete nom="telephone" type="VARCHAR(20)"/>
+        <Propriete nom="date_naissance" type="DATE"/>
+        <Propriete nom="adresse_rue" type="VARCHAR(255)"/>
+        <Propriete nom="adresse_ville" type="VARCHAR(100)"/>
+        <Propriete nom="code_postal" type="VARCHAR(10)"/>
+        <Propriete nom="pays" type="CHAR(2)"/>
+        <Propriete nom="mot_de_passe_hash" type="VARCHAR(255)"/>
+        <Propriete nom="nb_echecs_auth" type="INTEGER"/>
+        <Propriete nom="date_creation" type="TIMESTAMP"/>
+        <Propriete nom="date_modification" type="TIMESTAMP"/>
+        <Propriete nom="version" type="BIGINT"/>
+      </Proprietes>
+    </Entite>
+
+    <Entite nom="CompteBancaire" x="400" y="50">
+      <Proprietes>
+        <Propriete nom="id" type="UUID" identifiant="true"/>
+        <Propriete nom="iban" type="VARCHAR(34)"/>
+        <Propriete nom="bic" type="VARCHAR(11)"/>
+        <Propriete nom="solde" type="DECIMAL(15,2)"/>
+        <Propriete nom="devise" type="CHAR(3)"/>
+        <Propriete nom="decouvert_autorise" type="DECIMAL(15,2)"/>
+        <Propriete nom="taux_interet" type="DECIMAL(5,4)"/>
+        <Propriete nom="date_ouverture" type="DATE"/>
+        <Propriete nom="date_cloture" type="DATE"/>
+        <Propriete nom="date_modification" type="TIMESTAMP"/>
+        <Propriete nom="version" type="BIGINT"/>
+      </Proprietes>
+    </Entite>
+
+    <Entite nom="Transaction" x="400" y="400">
+      <Proprietes>
+        <Propriete nom="id" type="UUID" identifiant="true"/>
+        <Propriete nom="reference" type="VARCHAR(35)"/>
+        <Propriete nom="montant" type="DECIMAL(15,2)"/>
+        <Propriete nom="devise" type="CHAR(3)"/>
+        <Propriete nom="libelle" type="VARCHAR(140)"/>
+        <Propriete nom="iban_externe" type="VARCHAR(34)"/>
+        <Propriete nom="date_execution" type="TIMESTAMP"/>
+        <Propriete nom="date_valeur" type="DATE"/>
+        <Propriete nom="message_erreur" type="VARCHAR(255)"/>
+        <Propriete nom="version" type="BIGINT"/>
+      </Proprietes>
+    </Entite>
+
+    <Entite nom="AuditTrail" x="750" y="400">
+      <Proprietes>
+        <Propriete nom="id" type="UUID" identifiant="true"/>
+        <Propriete nom="timestamp" type="TIMESTAMP"/>
+        <Propriete nom="entite_cible" type="VARCHAR(50)"/>
+        <Propriete nom="entite_id" type="UUID"/>
+        <Propriete nom="ancien_etat" type="JSONB"/>
+        <Propriete nom="nouvel_etat" type="JSONB"/>
+        <Propriete nom="endpoint" type="VARCHAR(200)"/>
+        <Propriete nom="adresse_ip" type="VARCHAR(45)"/>
+        <Propriete nom="user_agent" type="VARCHAR(500)"/>
+      </Proprietes>
+    </Entite>
+
+    <Entite nom="PieceIdentite" x="50" y="400">
+      <Proprietes>
+        <Propriete nom="id" type="UUID" identifiant="true"/>
+        <Propriete nom="numero" type="VARCHAR(50)"/>
+        <Propriete nom="date_expiration" type="DATE"/>
+        <Propriete nom="date_creation" type="TIMESTAMP"/>
+      </Proprietes>
+    </Entite>
+
+    <Entite nom="Action" x="750" y="50">
+      <Proprietes>
+        <Propriete nom="id" type="UUID" identifiant="true"/>
+        <Propriete nom="code" type="VARCHAR(100)"/>
+        <Propriete nom="libelle" type="VARCHAR(255)"/>
+      </Proprietes>
+    </Entite>
+
+    <!-- ENUMS comme entités -->
+    <Entite nom="Role" x="50" y="250">
+      <Proprietes>
+        <Propriete nom="id" type="INTEGER" identifiant="true"/>
+        <Propriete nom="valeur" type="VARCHAR(20)"/>
+      </Proprietes>
+    </Entite>
+
+    <Entite nom="StatutUtilisateur" x="250" y="250">
+      <Proprietes>
+        <Propriete nom="id" type="INTEGER" identifiant="true"/>
+        <Propriete nom="valeur" type="VARCHAR(20)"/>
+      </Proprietes>
+    </Entite>
+
+    <Entite nom="TypeCompte" x="450" y="250">
+      <Proprietes>
+        <Propriete nom="id" type="INTEGER" identifiant="true"/>
+        <Propriete nom="valeur" type="VARCHAR(20)"/>
+      </Proprietes>
+    </Entite>
+
+    <Entite nom="StatutCompte" x="600" y="250">
+      <Proprietes>
+        <Propriete nom="id" type="INTEGER" identifiant="true"/>
+        <Propriete nom="valeur" type="VARCHAR(20)"/>
+      </Proprietes>
+    </Entite>
+
+    <Entite nom="TypeTransaction" x="200" y="550">
+      <Proprietes>
+        <Propriete nom="id" type="INTEGER" identifiant="true"/>
+        <Propriete nom="valeur" type="VARCHAR(20)"/>
+      </Proprietes>
+    </Entite>
+
+    <Entite nom="StatutTransaction" x="350" y="550">
+      <Proprietes>
+        <Propriete nom="id" type="INTEGER" identifiant="true"/>
+        <Propriete nom="valeur" type="VARCHAR(20)"/>
+      </Proprietes>
+    </Entite>
+
+    <Entite nom="TypePieceIdentite" x="50" y="600">
+      <Proprietes>
+        <Propriete nom="id" type="INTEGER" identifiant="true"/>
+        <Propriete nom="valeur" type="VARCHAR(20)"/>
+      </Proprietes>
+    </Entite>
+
+  </Entites>
+
+  <Relations>
+
+    <Relation nom="possede" x="220" y="50">
+      <Pattes>
+        <Patte entite="Utilisateur" cardinalite="1,1"/>
+        <Patte entite="CompteBancaire" cardinalite="0,n"/>
+      </Pattes>
+    </Relation>
+
+    <Relation nom="conseille" x="220" y="150">
+      <Pattes>
+        <Patte entite="Utilisateur" cardinalite="0,1"/>
+        <Patte entite="CompteBancaire" cardinalite="0,n"/>
+      </Pattes>
+    </Relation>
+
+    <Relation nom="debite" x="400" y="230">
+      <Pattes>
+        <Patte entite="CompteBancaire" cardinalite="0,n"/>
+        <Patte entite="Transaction" cardinalite="0,1"/>
+      </Pattes>
+    </Relation>
+
+    <Relation nom="credite" x="550" y="230">
+      <Pattes>
+        <Patte entite="CompteBancaire" cardinalite="0,n"/>
+        <Patte entite="Transaction" cardinalite="0,1"/>
+      </Pattes>
+    </Relation>
+
+    <Relation nom="initie" x="600" y="400">
+      <Pattes>
+        <Patte entite="Utilisateur" cardinalite="1,1"/>
+        <Patte entite="Transaction" cardinalite="0,n"/>
+      </Pattes>
+    </Relation>
+
+    <Relation nom="genere" x="700" y="400">
+      <Pattes>
+        <Patte entite="Transaction" cardinalite="1,1"/>
+        <Patte entite="AuditTrail" cardinalite="0,n"/>
+      </Pattes>
+    </Relation>
+
+    <Relation nom="trace" x="700" y="200">
+      <Pattes>
+        <Patte entite="Utilisateur" cardinalite="1,1"/>
+        <Patte entite="AuditTrail" cardinalite="0,n"/>
+      </Pattes>
+    </Relation>
+
+    <Relation nom="reference" x="760" y="200">
+      <Pattes>
+        <Patte entite="AuditTrail" cardinalite="1,1"/>
+        <Patte entite="Action" cardinalite="0,n"/>
+      </Pattes>
+    </Relation>
+
+    <Relation nom="justifie" x="50" y="300">
+      <Pattes>
+        <Patte entite="Utilisateur" cardinalite="1,1"/>
+        <Patte entite="PieceIdentite" cardinalite="1,n"/>
+      </Pattes>
+    </Relation>
+
+    <Relation nom="a_role" x="100" y="150">
+      <Pattes>
+        <Patte entite="Utilisateur" cardinalite="1,1"/>
+        <Patte entite="Role" cardinalite="0,n"/>
+      </Pattes>
+    </Relation>
+
+    <Relation nom="a_statut_user" x="200" y="200">
+      <Pattes>
+        <Patte entite="Utilisateur" cardinalite="1,1"/>
+        <Patte entite="StatutUtilisateur" cardinalite="0,n"/>
+      </Pattes>
+    </Relation>
+
+    <Relation nom="a_type_compte" x="450" y="150">
+      <Pattes>
+        <Patte entite="CompteBancaire" cardinalite="1,1"/>
+        <Patte entite="TypeCompte" cardinalite="0,n"/>
+      </Pattes>
+    </Relation>
+
+    <Relation nom="a_statut_compte" x="550" y="150">
+      <Pattes>
+        <Patte entite="CompteBancaire" cardinalite="1,1"/>
+        <Patte entite="StatutCompte" cardinalite="0,n"/>
+      </Pattes>
+    </Relation>
+
+    <Relation nom="a_type_transaction" x="300" y="500">
+      <Pattes>
+        <Patte entite="Transaction" cardinalite="1,1"/>
+        <Patte entite="TypeTransaction" cardinalite="0,n"/>
+      </Pattes>
+    </Relation>
+
+    <Relation nom="a_statut_transaction" x="400" y="500">
+      <Pattes>
+        <Patte entite="Transaction" cardinalite="1,1"/>
+        <Patte entite="StatutTransaction" cardinalite="0,n"/>
+      </Pattes>
+    </Relation>
+
+    <Relation nom="a_type_piece" x="50" y="500">
+      <Pattes>
+        <Patte entite="PieceIdentite" cardinalite="1,1"/>
+        <Patte entite="TypePieceIdentite" cardinalite="0,n"/>
+      </Pattes>
+    </Relation>
+
+  </Relations>
+
+</Looping>

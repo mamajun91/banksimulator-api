@@ -1,0 +1,90 @@
+@startuml
+title Effectuer un virement
+
+participant "Client" as Client
+participant "API REST" as API
+participant "TransactionService" as Service
+participant "CompteBancaireRepository" as CompteRepo
+participant "TransactionRepository" as Repository
+participant "AuditTrailService" as Audit
+participant "AuditTrailRepository" as AuditRepo
+participant "PostgreSQL" as DB
+
+Client -> API : POST /api/v1/comptes/{idCompteDebiteur}/virement\n{Authorization: Bearer token}
+
+API -> API : SmallRye JWT vérifie\nla signature du token
+alt Token invalide ou expiré
+    API --> Client : 401 Unauthorized
+end
+
+alt Rôle != CLIENT (@RolesAllowed)
+    API --> Client : 403 Forbidden
+end
+
+API -> API : Validation @Valid DTO
+alt Validation échouée
+    API --> Client : 400 Bad Request\n{erreurs de validation}
+end
+
+API -> Service : effectuerVirement(dto, idCompteDebiteur)
+
+Service -> CompteRepo : findById(idCompteDebiteur)
+CompteRepo -> DB : SELECT FROM compte_bancaire\nWHERE id = ?
+DB --> CompteRepo : résultat
+CompteRepo --> Service : Optional<CompteBancaire>
+alt Compte débiteur non trouvé
+    Service --> API : CompteNotFoundException
+    API --> Client : 404 Not Found\n{compte débiteur introuvable}
+end
+
+alt Statut compte débiteur != ACTIF
+    Service --> API : CompteNonActifException
+    API --> Client : 422 Unprocessable\n{compte débiteur non actif}
+end
+
+Service -> CompteRepo : findById(idCompteCrediteur)
+CompteRepo -> DB : SELECT FROM compte_bancaire\nWHERE id = ?
+DB --> CompteRepo : résultat
+CompteRepo --> Service : Optional<CompteBancaire>
+alt Compte créditeur non trouvé
+    Service --> API : CompteNotFoundException
+    API --> Client : 404 Not Found\n{compte créditeur introuvable}
+end
+
+alt Statut compte créditeur != ACTIF
+    Service --> API : CompteNonActifException
+    API --> Client : 422 Unprocessable\n{compte créditeur non actif}
+end
+
+Service -> Service : verifierSolde(solde, montant, decouvertAutorise)
+alt Solde insuffisant
+    Service --> API : SoldeInsuffisantException
+    API --> Client : 422 Unprocessable\n{solde insuffisant}
+end
+
+Service -> Service : construireTransaction(dto, compteDebiteur, compteCrediteur)
+Service -> Repository : save(transaction)
+Repository -> DB : INSERT INTO transaction
+DB --> Repository : transaction persistée
+Repository --> Service : transaction
+
+Service -> Service : nouveauSoldeDebiteur = solde - montant
+Service -> CompteRepo : save(compteDebiteur)
+CompteRepo -> DB : UPDATE compte_bancaire\nSET solde = ?\nWHERE id = ?
+DB --> CompteRepo : compte débiteur persisté
+CompteRepo --> Service : compte débiteur mis à jour
+
+Service -> Service : nouveauSoldeCrediteur = solde + montant
+Service -> CompteRepo : save(compteCrediteur)
+CompteRepo -> DB : UPDATE compte_bancaire\nSET solde = ?\nWHERE id = ?
+DB --> CompteRepo : compte créditeur persisté
+CompteRepo --> Service : compte créditeur mis à jour
+
+Service -> Audit : tracer(transaction,\nACTION_EFFECTUER_VIREMENT,\nENTITE_TRANSACTION)
+Audit -> AuditRepo : save(auditTrail)
+AuditRepo -> DB : INSERT INTO audit_trail
+
+Service --> API : TransactionResponseDTO
+API --> Client : 201 Created\n{id, montant, dateExecution, statut}
+
+@enduml

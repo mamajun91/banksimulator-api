@@ -1,0 +1,63 @@
+@startuml
+
+title Créer un compte bancaire
+
+actor Conseiller
+participant "API REST" as API
+participant "CompteBancaireService" as Service
+participant "UtilisateurRepository" as UtilisateurRepo
+participant "CompteBancaireRepository" as Repository
+participant "AuditTrailService" as Audit
+participant "AuditTrailRepository" as AuditRepo
+participant "PostgreSQL" as DB
+
+Conseiller -> API : POST /api/v1/clients/{idUtilisateur}/comptes\n{Authorization : Bearer token}
+
+API -> API : SmallRye JWT vérifie\nla signature du token
+alt Token invalide ou expiré
+    API --> Conseiller : 401 Unauthorized
+end
+
+alt Rôle != CONSEILLER (@RolesAllowed)
+    API --> Conseiller : 403 Forbidden
+end
+
+API -> API : Validation @Valid DTO
+alt Validation échouée
+    API --> Conseiller : 400 Bad Request\n{erreurs de validation}
+end
+
+
+API -> Service : creer_compte_bancaire(dto, idUtilisateur)
+
+Service -> UtilisateurRepo : findById(idUtilisateur)
+UtilisateurRepo -> DB : SELECT FROM utilisateur\nWHERE idUtilisateur = ?
+DB --> UtilisateurRepo : résultat
+
+UtilisateurRepo --> Service : Optional<Utilisateur>
+
+alt Utilisateur non trouvé
+    Service --> API : UtilisateurNotFoundException
+    API --> Conseiller : 404 Not Found\n{utilisateur introuvable}
+end
+
+Service -> Service : genererIBAN()
+Service -> Repository : existsByIban(iban)
+alt IBAN déjà existant
+    Service -> Service : genererIBAN()
+end
+Service -> Service : construireEntite(dto, utilisateur, iban)
+Service -> Repository : save(compteBancaire)
+
+Repository -> DB : INSERT INTO compte_bancaire
+DB --> Repository : compte_bancaire persisté
+Repository --> Service : compte_bancaire
+
+Service -> Audit : tracer(utilisateur,compte_bancaire\nCREER_COMPTE_BANCAIRE,\nEXPECTED_STATE)
+Audit -> AuditRepo : save(auditTrail)
+AuditRepo -> DB : INSERT INTO audit_trail 
+
+Service --> API : CompteBancaireResponseDTO
+API --> Conseiller : 201 Created\n{id, type, statut}
+
+@enduml
