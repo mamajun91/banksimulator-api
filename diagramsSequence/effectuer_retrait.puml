@@ -1,0 +1,67 @@
+@startuml
+title Effectuer un retrait
+
+participant "Client" as Client
+participant "API REST" as API
+participant "TransactionService" as Service
+participant "CompteBancaireRepository" as CompteRepo
+participant "TransactionRepository" as Repository
+participant "AuditTrailService" as Audit
+participant "AuditTrailRepository" as AuditRepo
+participant "PostgreSQL" as DB
+
+Client -> API : POST /api/v1/comptes/{idCompte}/retrait\n{Authorization: Bearer token}
+
+API -> API : SmallRye JWT vérifie\nla signature du token
+alt Token invalide ou expiré
+    API --> Client : 401 Unauthorized
+end
+alt Rôle != CLIENT (@RolesAllowed)
+    API --> Client : 403 Forbidden
+end
+API -> API : Validation @Valid DTO
+alt Validation échouée
+    API --> Client : 400 Bad Request\n{erreurs de validation}
+end
+
+API -> Service : effectuerRetrait(dto, idCompte)
+
+Service -> CompteRepo : findById(idCompte)
+CompteRepo -> DB : SELECT FROM compte_bancaire\nWHERE id = ?
+DB --> CompteRepo : résultat
+CompteRepo --> Service : Optional<CompteBancaire>
+alt Compte non trouvé
+    Service --> API : CompteNotFoundException
+    API --> Client : 404 Not Found\n{compte introuvable}
+end
+alt Statut != ACTIF
+    Service --> API : CompteNonActifException
+    API --> Client : 422 Unprocessable\n{compte non actif}
+end
+
+Service -> Service : verifierSolde(solde, montant, decouvertAutorise)
+alt Solde insuffisant
+    Service --> API : SoldeInsuffisantException
+    API --> Client : 422 Unprocessable\n{solde insuffisant}
+end
+
+Service -> Service : construireTransaction(dto, compte)
+Service -> Repository : save(transaction)
+Repository -> DB : INSERT INTO transaction
+DB --> Repository : transaction persistée
+Repository --> Service : transaction
+
+Service -> Service : nouveauSolde = solde - montant
+Service -> CompteRepo : save(compte)
+CompteRepo -> DB : UPDATE compte_bancaire\nSET solde = ?\nWHERE id = ?
+DB --> CompteRepo : compte persisté
+CompteRepo --> Service : compte mis à jour
+
+Service -> Audit : tracer(transaction,\nACTION_EFFECTUER_RETRAIT,\nENTITE_TRANSACTION)
+Audit -> AuditRepo : save(auditTrail)
+AuditRepo -> DB : INSERT INTO audit_trail
+
+Service --> API : TransactionResponseDTO
+API --> Client : 201 Created\n{id, montant, dateExecution, statut}
+
+@enduml

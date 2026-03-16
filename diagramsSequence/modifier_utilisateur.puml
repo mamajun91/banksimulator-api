@@ -1,0 +1,59 @@
+@startuml
+title Modifier un utilisateur
+
+participant "Admin" as Admin
+participant "API REST" as API
+participant "UtilisateurService" as Service
+participant "UtilisateurRepository" as Repository
+participant "AuditTrailService" as Audit
+participant "AuditTrailRepository" as AuditRepo
+participant "PostgreSQL" as DB
+
+Admin -> API : PUT /api/v1/utilisateurs/{idUtilisateur}\n{Authorization: Bearer token}
+
+API -> API : SmallRye JWT vérifie\nla signature du token
+alt Token invalide ou expiré
+    API --> Admin : 401 Unauthorized
+end
+alt Rôle != ADMIN (@RolesAllowed)
+    API --> Admin : 403 Forbidden
+end
+
+API -> API : Validation @Valid DTO
+alt Validation échouée
+    API --> Admin : 400 Bad Request\n{erreurs de validation}
+end
+
+API -> Service : modifierUtilisateur(idUtilisateur, dto)
+
+Service -> Repository : findById(idUtilisateur)
+Repository -> DB : SELECT FROM utilisateur\nWHERE id = ?
+DB --> Repository : résultat
+Repository --> Service : Optional<Utilisateur>
+alt Utilisateur non trouvé
+    Service --> API : UtilisateurNotFoundException
+    API --> Admin : 404 Not Found\n{utilisateur introuvable}
+end
+
+alt Email modifié et déjà utilisé
+    Service -> Repository : existsByEmail(email)
+    Repository -> DB : SELECT FROM utilisateur\nWHERE email = ?
+    DB --> Repository : résultat
+    Repository --> Service : boolean
+    Service --> API : EmailDejaUtiliseException
+    API --> Admin : 409 Conflict\n{email déjà utilisé}
+end
+
+Service -> Service : mettreAJourEntite(utilisateur, dto)
+Service -> Repository : save(utilisateur)
+Repository -> DB : UPDATE utilisateur\nSET ... WHERE id = ?
+DB --> Repository : utilisateur mis à jour
+
+Service -> Audit : tracer(utilisateur.id,\nACTION_MODIFIER_UTILISATEUR,\nENTITE_UTILISATEUR)
+Audit -> AuditRepo : save(auditTrail)
+AuditRepo -> DB : INSERT INTO audit_trail
+
+Service --> API : UtilisateurResponseDTO
+API --> Admin : 200 OK\n{id, nom, prenom, email, role, statut}
+
+@enduml

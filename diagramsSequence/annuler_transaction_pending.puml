@@ -1,0 +1,51 @@
+@startuml
+title Annuler une transaction PENDING
+
+participant "Client ou Admin" as Acteur
+participant "API REST" as API
+participant "TransactionService" as Service
+participant "TransactionRepository" as Repository
+participant "CompteBancaireRepository" as CompteRepo
+participant "AuditTrailService" as Audit
+participant "AuditTrailRepository" as AuditRepo
+participant "PostgreSQL" as DB
+
+Acteur -> API : PATCH /api/v1/transactions/{idTransaction}/annuler\n{Authorization: Bearer token}
+
+API -> API : SmallRye JWT vérifie\nla signature du token
+alt Token invalide ou expiré
+    API --> Acteur : 401 Unauthorized
+end
+alt Rôle != CLIENT ou ADMIN (@RolesAllowed)
+    API --> Acteur : 403 Forbidden
+end
+
+API -> Service : annulerTransaction(idTransaction)
+
+Service -> Repository : findById(idTransaction)
+Repository -> DB : SELECT FROM transaction\nWHERE id = ?
+DB --> Repository : résultat
+Repository --> Service : Optional<Transaction>
+alt Transaction non trouvée
+    Service --> API : TransactionNotFoundException
+    API --> Acteur : 404 Not Found\n{transaction introuvable}
+end
+
+alt Statut != PENDING
+    Service --> API : TransactionImmutableException
+    API --> Acteur : 422 Unprocessable\n{transaction non annulable}
+end
+
+Service -> Service : transaction.setStatut(CANCELLED)
+Service -> Repository : save(transaction)
+Repository -> DB : UPDATE transaction\nSET statut = CANCELLED\nWHERE id = ?
+DB --> Repository : transaction mise à jour
+
+Service -> Audit : tracer(transaction,\nACTION_ANNULER_TRANSACTION,\nENTITE_TRANSACTION)
+Audit -> AuditRepo : save(auditTrail)
+AuditRepo -> DB : INSERT INTO audit_trail
+
+Service --> API : TransactionResponseDTO
+API --> Acteur : 200 OK\n{id, statut: CANCELLED, dateExecution}
+
+@enduml

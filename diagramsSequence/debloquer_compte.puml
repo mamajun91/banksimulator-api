@@ -1,0 +1,50 @@
+@startuml
+title Débloquer un compte
+
+participant "Admin" as Admin
+participant "API REST" as API
+participant "CompteBancaireService" as Service
+participant "CompteBancaireRepository" as Repository
+participant "AuditTrailService" as Audit
+participant "AuditTrailRepository" as AuditRepo
+participant "PostgreSQL" as DB
+
+Admin -> API : PATCH /api/v1/comptes/{idCompte}/debloquer\n{Authorization: Bearer token}
+
+API -> API : SmallRye JWT vérifie\nla signature du token
+alt Token invalide ou expiré
+    API --> Admin : 401 Unauthorized
+end
+alt Rôle != ADMIN (@RolesAllowed)
+    API --> Admin : 403 Forbidden
+end
+
+API -> Service : debloquerCompte(idCompte)
+
+Service -> Repository : findById(idCompte)
+Repository -> DB : SELECT FROM compte_bancaire\nWHERE id = ?
+DB --> Repository : résultat
+Repository --> Service : Optional<CompteBancaire>
+alt Compte non trouvé
+    Service --> API : CompteNotFoundException
+    API --> Admin : 404 Not Found\n{compte introuvable}
+end
+
+alt Statut != BLOQUE
+    Service --> API : CompteNonBloqueException
+    API --> Admin : 409 Conflict\n{compte non bloqué}
+end
+
+Service -> Service : compte.setStatut(ACTIF)
+Service -> Repository : save(compte)
+Repository -> DB : UPDATE compte_bancaire\nSET statut = ACTIF\nWHERE id = ?
+DB --> Repository : compte mis à jour
+
+Service -> Audit : tracer(compte.id,\nACTION_DEBLOQUER_COMPTE,\nENTITE_COMPTE)
+Audit -> AuditRepo : save(auditTrail)
+AuditRepo -> DB : INSERT INTO audit_trail
+
+Service --> API : CompteBancaireResponseDTO
+API --> Admin : 200 OK\n{id, statut: ACTIF}
+
+@enduml

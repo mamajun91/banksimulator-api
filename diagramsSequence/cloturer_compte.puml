@@ -1,0 +1,56 @@
+@startuml
+title Clôturer un compte
+
+participant "Admin" as Admin
+participant "API REST" as API
+participant "CompteBancaireService" as Service
+participant "CompteBancaireRepository" as Repository
+participant "AuditTrailService" as Audit
+participant "AuditTrailRepository" as AuditRepo
+participant "PostgreSQL" as DB
+
+Admin -> API : PATCH /api/v1/comptes/{idCompte}/cloturer\n{Authorization: Bearer token}
+
+API -> API : SmallRye JWT vérifie\nla signature du token
+alt Token invalide ou expiré
+    API --> Admin : 401 Unauthorized
+end
+alt Rôle != ADMIN (@RolesAllowed)
+    API --> Admin : 403 Forbidden
+end
+
+API -> Service : cloturerCompte(idCompte)
+
+Service -> Repository : findById(idCompte)
+Repository -> DB : SELECT FROM compte_bancaire\nWHERE id = ?
+DB --> Repository : résultat
+Repository --> Service : Optional<CompteBancaire>
+alt Compte non trouvé
+    Service --> API : CompteNotFoundException
+    API --> Admin : 404 Not Found\n{compte introuvable}
+end
+
+alt Statut == CLOTURE
+    Service --> API : CompteDejaClotureException
+    API --> Admin : 409 Conflict\n{compte déjà clôturé}
+end
+
+alt Solde != 0
+    Service --> API : SoldeNonNulException
+    API --> Admin : 422 Unprocessable\n{solde doit être égal à 0}
+end
+
+Service -> Service : compte.setStatut(CLOTURE)
+Service -> Service : compte.setDateCloture(now())
+Service -> Repository : save(compte)
+Repository -> DB : UPDATE compte_bancaire\nSET statut = CLOTURE, date_cloture = ?\nWHERE id = ?
+DB --> Repository : compte mis à jour
+
+Service -> Audit : tracer(compte.id,\nACTION_CLOTURER_COMPTE,\nENTITE_COMPTE)
+Audit -> AuditRepo : save(auditTrail)
+AuditRepo -> DB : INSERT INTO audit_trail
+
+Service --> API : CompteBancaireResponseDTO
+API --> Admin : 200 OK\n{id, statut: CLOTURE, dateCloture}
+
+@enduml

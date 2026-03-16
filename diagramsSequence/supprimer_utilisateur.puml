@@ -1,0 +1,55 @@
+@startuml
+title Supprimer un utilisateur
+
+participant "Admin" as Admin
+participant "API REST" as API
+participant "UtilisateurService" as Service
+participant "UtilisateurRepository" as Repository
+participant "CompteBancaireRepository" as CompteRepo
+participant "AuditTrailService" as Audit
+participant "AuditTrailRepository" as AuditRepo
+participant "PostgreSQL" as DB
+
+Admin -> API : DELETE /api/v1/utilisateurs/{idUtilisateur}\n{Authorization: Bearer token}
+
+API -> API : SmallRye JWT vérifie\nla signature du token
+alt Token invalide ou expiré
+    API --> Admin : 401 Unauthorized
+end
+alt Rôle != ADMIN (@RolesAllowed)
+    API --> Admin : 403 Forbidden
+end
+
+API -> Service : supprimerUtilisateur(idUtilisateur)
+
+Service -> Repository : findById(idUtilisateur)
+Repository -> DB : SELECT FROM utilisateur\nWHERE id = ?
+DB --> Repository : résultat
+Repository --> Service : Optional<Utilisateur>
+alt Utilisateur non trouvé
+    Service --> API : UtilisateurNotFoundException
+    API --> Admin : 404 Not Found\n{utilisateur introuvable}
+end
+
+Service -> CompteRepo : findAllByTitulaireId(idUtilisateur)
+CompteRepo -> DB : SELECT FROM compte_bancaire\nWHERE titulaire_id = ?
+DB --> CompteRepo : résultat
+CompteRepo --> Service : List<CompteBancaire>
+
+alt Solde != 0 sur au moins un compte
+    Service --> API : SoldeNonNulException
+    API --> Admin : 422 Unprocessable\n{solde doit être égal à 0}
+end
+
+Service -> Audit : tracer(utilisateur.id,\nACTION_SUPPRIMER_UTILISATEUR,\nENTITE_UTILISATEUR)
+Audit -> AuditRepo : save(auditTrail)
+AuditRepo -> DB : INSERT INTO audit_trail
+
+Service -> Repository : delete(utilisateur)
+Repository -> DB : DELETE FROM utilisateur\nWHERE id = ?
+DB --> Repository : utilisateur supprimé
+
+Service --> API : void
+API --> Admin : 204 No Content
+
+@enduml
