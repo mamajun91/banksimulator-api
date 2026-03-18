@@ -1,0 +1,31 @@
+@startuml
+title Tracer une action (AuditTrail)
+
+participant "ServiceAppelant" as Appelant
+participant "AuditTrailService" as Audit
+participant "ActionRepository" as ActionRepo
+participant "AuditTrailRepository" as AuditRepo
+participant "PostgreSQL" as DB
+
+Appelant -> Audit : tracer(utilisateurId, actionCode,\nentiteCible, entiteId)
+
+Audit -> ActionRepo : findByCode(actionCode)
+ActionRepo -> DB : SELECT FROM action\nWHERE code = ?
+DB --> ActionRepo : résultat
+ActionRepo --> Audit : Optional<Action>
+
+alt Action non trouvée
+    Audit --> Appelant : NotFoundException\n{action introuvable}
+end
+
+Audit -> Audit : construireAuditTrail\n(utilisateurId, action, entiteCible, entiteId)
+
+Audit -> AuditRepo : persist(auditTrail)
+AuditRepo -> DB : INSERT INTO audit_trail
+DB --> AuditRepo : auditTrail persisté
+
+Audit --> Appelant : void
+
+@enduml
+
+

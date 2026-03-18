@@ -1,0 +1,175 @@
+package com.banksimulator.service.impl;
+
+import com.banksimulator.dto.envoie.PieceIdentiteRequestDTO;
+import com.banksimulator.dto.envoie.UtilisateurRequestDTO;
+import com.banksimulator.dto.reponse.PieceIdentiteResponseDTO;
+import com.banksimulator.dto.reponse.UtilisateurResponseDTO;
+import com.banksimulator.entities.PieceIdentite;
+import com.banksimulator.entities.Utilisateur;
+import com.banksimulator.enums.EntiteCible;
+import com.banksimulator.enums.StatutUtilisateur;
+import com.banksimulator.mapper.PieceIdentiteMapper;
+import com.banksimulator.mapper.UtilisateurMapper;
+import com.banksimulator.repository.PieceIdentiteRepository;
+import com.banksimulator.repository.UtilisateurRepository;
+import com.banksimulator.service.interfaces.IUtilisateurService;
+import io.quarkus.elytron.security.common.BcryptUtil;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import jakarta.transaction.Transactional;
+import jakarta.ws.rs.NotFoundException;
+import jakarta.ws.rs.WebApplicationException;
+import jakarta.ws.rs.core.Response;
+
+import java.util.List;
+import java.util.UUID;
+
+@ApplicationScoped
+public class UtilisateurServiceImpl implements IUtilisateurService {
+
+    @Inject
+    UtilisateurRepository utilisateurRepository;
+
+    @Inject
+    PieceIdentiteRepository pieceIdentiteRepository;
+
+    @Inject
+    AuditTrailServiceImpl auditTrailService;
+
+    @Inject
+    UtilisateurMapper utilisateurMapper;
+
+    @Inject
+    PieceIdentiteMapper pieceIdentiteMapper;
+
+    @Override
+    @Transactional
+    public UtilisateurResponseDTO creer(UtilisateurRequestDTO dto) {
+        if (utilisateurRepository.existsByEmail(dto.email())) {
+            throw new WebApplicationException("Email déjà utilisé", Response.Status.CONFLICT);
+        }
+        Utilisateur utilisateur = utilisateurMapper.toEntity(dto);
+        utilisateur.setMotDePasseHash(BcryptUtil.bcryptHash(dto.motDePasse()));
+        utilisateurRepository.persist(utilisateur);
+
+        auditTrailService.tracer(
+                utilisateur.getId(),
+                "CREER_UTILISATEUR",
+                EntiteCible.UTILISATEUR,
+                utilisateur.getId()
+        );
+
+        return utilisateurMapper.toDTO(utilisateur);
+    }
+
+    @Override
+    public UtilisateurResponseDTO findById(UUID id) {
+        Utilisateur utilisateur = utilisateurRepository.findByIdOptional(id)
+                .orElseThrow(() -> new NotFoundException("Utilisateur introuvable"));
+        return utilisateurMapper.toDTO(utilisateur);
+    }
+
+    @Override
+    public List<UtilisateurResponseDTO> findAll() {
+        return utilisateurRepository.listAll()
+                .stream()
+                .map(utilisateurMapper::toDTO)
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public UtilisateurResponseDTO modifier(UUID id, UtilisateurRequestDTO dto) {
+        Utilisateur utilisateur = utilisateurRepository.findByIdOptional(id)
+                .orElseThrow(() -> new NotFoundException("Utilisateur introuvable"));
+        if (!utilisateur.getEmail().equals(dto.email())
+                && utilisateurRepository.existsByEmail(dto.email())) {
+            throw new WebApplicationException("Email déjà utilisé", Response.Status.CONFLICT);
+        }
+        utilisateurMapper.updateEntity(dto, utilisateur);
+
+        auditTrailService.tracer(
+                utilisateur.getId(),
+                "MODIFIER_UTILISATEUR",
+                EntiteCible.UTILISATEUR,
+                utilisateur.getId()
+        );
+
+        return utilisateurMapper.toDTO(utilisateur);
+    }
+
+    @Override
+    @Transactional
+    public void supprimer(UUID id) {
+        Utilisateur utilisateur = utilisateurRepository.findByIdOptional(id)
+                .orElseThrow(() -> new NotFoundException("Utilisateur introuvable"));
+        utilisateurRepository.delete(utilisateur);
+
+        auditTrailService.tracer(
+                utilisateur.getId(),
+                "SUPPRIMER_UTILISATEUR",
+                EntiteCible.UTILISATEUR,
+                utilisateur.getId()
+        );
+    }
+
+    @Override
+    @Transactional
+    public UtilisateurResponseDTO bloquer(UUID id) {
+        Utilisateur utilisateur = utilisateurRepository.findByIdOptional(id)
+                .orElseThrow(() -> new NotFoundException("Utilisateur introuvable"));
+        if (utilisateur.getStatut() == StatutUtilisateur.BLOQUE) {
+            throw new WebApplicationException("Utilisateur déjà bloqué", Response.Status.CONFLICT);
+        }
+        utilisateur.setStatut(StatutUtilisateur.BLOQUE);
+
+        auditTrailService.tracer(
+                utilisateur.getId(),
+                "BLOQUER_UTILISATEUR",
+                EntiteCible.UTILISATEUR,
+                utilisateur.getId()
+        );
+
+        return utilisateurMapper.toDTO(utilisateur);
+    }
+
+    @Override
+    @Transactional
+    public UtilisateurResponseDTO debloquer(UUID id) {
+        Utilisateur utilisateur = utilisateurRepository.findByIdOptional(id)
+                .orElseThrow(() -> new NotFoundException("Utilisateur introuvable"));
+        if (utilisateur.getStatut() != StatutUtilisateur.BLOQUE) {
+            throw new WebApplicationException("Utilisateur non bloqué", Response.Status.CONFLICT);
+        }
+        utilisateur.setStatut(StatutUtilisateur.ACTIF);
+        utilisateur.setNbEchecsAuth(0);
+
+        auditTrailService.tracer(
+                utilisateur.getId(),
+                "DEBLOQUER_UTILISATEUR",
+                EntiteCible.UTILISATEUR,
+                utilisateur.getId()
+        );
+
+        return utilisateurMapper.toDTO(utilisateur);
+    }
+
+    @Override
+    @Transactional
+    public PieceIdentiteResponseDTO ajouterPieceIdentite(UUID idUtilisateur, PieceIdentiteRequestDTO dto) {
+        Utilisateur utilisateur = utilisateurRepository.findByIdOptional(idUtilisateur)
+                .orElseThrow(() -> new NotFoundException("Utilisateur introuvable"));
+        PieceIdentite pieceIdentite = pieceIdentiteMapper.toEntity(dto);
+        pieceIdentite.setUtilisateur(utilisateur);
+        pieceIdentiteRepository.persist(pieceIdentite);
+
+        auditTrailService.tracer(
+                utilisateur.getId(),
+                "AJOUTER_IDENTITE",
+                EntiteCible.UTILISATEUR,
+                utilisateur.getId()
+        );
+
+        return pieceIdentiteMapper.toDTO(pieceIdentite);
+    }
+}
