@@ -8,6 +8,8 @@ import com.banksimulator.entities.PieceIdentite;
 import com.banksimulator.entities.Utilisateur;
 import com.banksimulator.enums.EntiteCible;
 import com.banksimulator.enums.StatutUtilisateur;
+import com.banksimulator.exception.EmailDejaUtiliseException;
+import com.banksimulator.exception.UtilisateurNotFoundException;
 import com.banksimulator.mapper.PieceIdentiteMapper;
 import com.banksimulator.mapper.UtilisateurMapper;
 import com.banksimulator.repository.PieceIdentiteRepository;
@@ -17,9 +19,6 @@ import io.quarkus.elytron.security.common.BcryptUtil;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
-import jakarta.ws.rs.NotFoundException;
-import jakarta.ws.rs.WebApplicationException;
-import jakarta.ws.rs.core.Response;
 
 import java.util.List;
 import java.util.UUID;
@@ -46,7 +45,7 @@ public class UtilisateurServiceImpl implements IUtilisateurService {
     @Transactional
     public UtilisateurResponseDTO creer(UtilisateurRequestDTO dto) {
         if (utilisateurRepository.existsByEmail(dto.email())) {
-            throw new WebApplicationException("Email déjà utilisé", Response.Status.CONFLICT);
+            throw new EmailDejaUtiliseException();
         }
         Utilisateur utilisateur = utilisateurMapper.toEntity(dto);
         utilisateur.setMotDePasseHash(BcryptUtil.bcryptHash(dto.motDePasse()));
@@ -65,7 +64,7 @@ public class UtilisateurServiceImpl implements IUtilisateurService {
     @Override
     public UtilisateurResponseDTO findById(UUID id) {
         Utilisateur utilisateur = utilisateurRepository.findByIdOptional(id)
-                .orElseThrow(() -> new NotFoundException("Utilisateur introuvable"));
+                .orElseThrow(UtilisateurNotFoundException::new);
         return utilisateurMapper.toDTO(utilisateur);
     }
 
@@ -81,10 +80,10 @@ public class UtilisateurServiceImpl implements IUtilisateurService {
     @Transactional
     public UtilisateurResponseDTO modifier(UUID id, UtilisateurRequestDTO dto) {
         Utilisateur utilisateur = utilisateurRepository.findByIdOptional(id)
-                .orElseThrow(() -> new NotFoundException("Utilisateur introuvable"));
+                .orElseThrow(UtilisateurNotFoundException::new);
         if (!utilisateur.getEmail().equals(dto.email())
                 && utilisateurRepository.existsByEmail(dto.email())) {
-            throw new WebApplicationException("Email déjà utilisé", Response.Status.CONFLICT);
+            throw new EmailDejaUtiliseException();
         }
         utilisateurMapper.updateEntity(dto, utilisateur);
 
@@ -102,7 +101,7 @@ public class UtilisateurServiceImpl implements IUtilisateurService {
     @Transactional
     public void supprimer(UUID id) {
         Utilisateur utilisateur = utilisateurRepository.findByIdOptional(id)
-                .orElseThrow(() -> new NotFoundException("Utilisateur introuvable"));
+                .orElseThrow(UtilisateurNotFoundException::new);
         utilisateurRepository.delete(utilisateur);
 
         auditTrailService.tracer(
@@ -117,9 +116,9 @@ public class UtilisateurServiceImpl implements IUtilisateurService {
     @Transactional
     public UtilisateurResponseDTO bloquer(UUID id) {
         Utilisateur utilisateur = utilisateurRepository.findByIdOptional(id)
-                .orElseThrow(() -> new NotFoundException("Utilisateur introuvable"));
+                .orElseThrow(UtilisateurNotFoundException::new);
         if (utilisateur.getStatut() == StatutUtilisateur.BLOQUE) {
-            throw new WebApplicationException("Utilisateur déjà bloqué", Response.Status.CONFLICT);
+            throw new EmailDejaUtiliseException();
         }
         utilisateur.setStatut(StatutUtilisateur.BLOQUE);
 
@@ -137,9 +136,9 @@ public class UtilisateurServiceImpl implements IUtilisateurService {
     @Transactional
     public UtilisateurResponseDTO debloquer(UUID id) {
         Utilisateur utilisateur = utilisateurRepository.findByIdOptional(id)
-                .orElseThrow(() -> new NotFoundException("Utilisateur introuvable"));
+                .orElseThrow(UtilisateurNotFoundException::new);
         if (utilisateur.getStatut() != StatutUtilisateur.BLOQUE) {
-            throw new WebApplicationException("Utilisateur non bloqué", Response.Status.CONFLICT);
+            throw new EmailDejaUtiliseException();
         }
         utilisateur.setStatut(StatutUtilisateur.ACTIF);
         utilisateur.setNbEchecsAuth(0);
@@ -158,7 +157,7 @@ public class UtilisateurServiceImpl implements IUtilisateurService {
     @Transactional
     public PieceIdentiteResponseDTO ajouterPieceIdentite(UUID idUtilisateur, PieceIdentiteRequestDTO dto) {
         Utilisateur utilisateur = utilisateurRepository.findByIdOptional(idUtilisateur)
-                .orElseThrow(() -> new NotFoundException("Utilisateur introuvable"));
+                .orElseThrow(UtilisateurNotFoundException::new);
         PieceIdentite pieceIdentite = pieceIdentiteMapper.toEntity(dto);
         pieceIdentite.setUtilisateur(utilisateur);
         pieceIdentiteRepository.persist(pieceIdentite);

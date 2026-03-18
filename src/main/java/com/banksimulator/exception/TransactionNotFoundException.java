@@ -1,7 +1,7 @@
 package com.banksimulator.exception;
 
 public class TransactionNotFoundException extends BankSimulatorException {
-    public TransactionNotFoundException(String id) {
+    public TransactionNotFoundException() {
         super("Transaction introuvable", 404);
     }
 }

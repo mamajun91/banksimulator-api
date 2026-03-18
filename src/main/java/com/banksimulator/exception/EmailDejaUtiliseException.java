@@ -1,7 +1,7 @@
 package com.banksimulator.exception;
 
 public class EmailDejaUtiliseException extends BankSimulatorException {
-    public EmailDejaUtiliseException(String email) {
+    public EmailDejaUtiliseException() {
         super("Email déjà utilisé", 409);
     }
 }
