@@ -1,7 +1,7 @@
 package com.banksimulator.exception;
 
-public class UtilisateurNotFoundException extends RuntimeException {
+public class UtilisateurNotFoundException extends BankSimulatorException {
     public UtilisateurNotFoundException(String id) {
-        super("Utilisateur introuvable : " + id);
+        super("Utilisateur introuvable", 404);
     }
 }

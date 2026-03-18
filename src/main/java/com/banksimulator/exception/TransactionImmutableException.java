@@ -1,7 +1,7 @@
 package com.banksimulator.exception;
 
-public class TransactionImmutableException extends RuntimeException {
+public class TransactionImmutableException extends BankSimulatorException {
     public TransactionImmutableException() {
-        super("Transaction non annulable — statut différent de PENDING");
+        super("Transaction non annulable — statut différent de PENDING", 422);
     }
 }

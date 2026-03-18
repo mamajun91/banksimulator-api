@@ -1,7 +1,7 @@
 package com.banksimulator.exception;
 
-public class CompteBloqueException extends RuntimeException {
+public class CompteBloqueException extends BankSimulatorException {
     public CompteBloqueException() {
-        super("Compte bloqué — accès refusé");
+        super("Compte bloqué — accès refusé", 432);
     }
 }
