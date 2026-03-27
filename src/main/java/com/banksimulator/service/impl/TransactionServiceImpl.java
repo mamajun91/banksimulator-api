@@ -18,6 +18,7 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -172,6 +173,21 @@ public class TransactionServiceImpl implements ITransactionService {
             ref = "TXN-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
         } while (transactionRepo.existsByReference(ref));
         return ref;
+    }
+
+    @Override
+    public List<TransactionResponseDTO> findHistoriqueByCompte(UUID idCompte, String email) {
+        CompteBancaire compte = compteRepo.findByIdOptional(idCompte)
+                .orElseThrow(CompteNotFoundException::new);
+        if (!compte.getTitulaire().getEmail().equals(email))
+            throw new AccesInterditException();
+
+        List<Transaction> historique = new ArrayList<>();
+        historique.addAll(transactionRepo.findByCompteDebiteurId(idCompte));
+        historique.addAll(transactionRepo.findByCompteCrediteurId(idCompte));
+        return historique.stream()
+                .map(transactionMapper::toDTO)
+                .toList();
     }
 }
 

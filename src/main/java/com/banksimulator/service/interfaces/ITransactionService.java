@@ -17,4 +17,5 @@ public interface ITransactionService {
     List<TransactionResponseDTO> findByCompteDebiteurId(UUID idCompte);
     List<TransactionResponseDTO> findByCompteCrediteurId(UUID idCompte);
     List<TransactionResponseDTO> findByInitiateurId(UUID idUtilisateur);
+    List<TransactionResponseDTO> findHistoriqueByCompte(UUID idCompte, String email);
 }
