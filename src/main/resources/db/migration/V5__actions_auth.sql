@@ -1,0 +1,2 @@
+INSERT INTO action (id, code, libelle) VALUES (gen_random_uuid(), 'ACTION_AUTH_REUSSIE', 'Authentification réussie');
+INSERT INTO action (id, code, libelle) VALUES (gen_random_uuid(), 'ACTION_AUTH_ECHOUEE', 'Authentification échouée');

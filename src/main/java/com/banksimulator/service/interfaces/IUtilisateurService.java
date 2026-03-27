@@ -1,7 +1,9 @@
 package com.banksimulator.service.interfaces;
 
+import com.banksimulator.dto.envoie.AuthRequestDTO;
 import com.banksimulator.dto.envoie.PieceIdentiteRequestDTO;
 import com.banksimulator.dto.envoie.UtilisateurRequestDTO;
+import com.banksimulator.dto.reponse.AuthResponseDTO;
 import com.banksimulator.dto.reponse.PieceIdentiteResponseDTO;
 import com.banksimulator.dto.reponse.UtilisateurResponseDTO;
 
@@ -18,4 +20,5 @@ public interface IUtilisateurService{
     UtilisateurResponseDTO bloquer(UUID id);
     UtilisateurResponseDTO debloquer(UUID id);
     PieceIdentiteResponseDTO ajouterPieceIdentite(UUID id, PieceIdentiteRequestDTO pieceDto);
+    AuthResponseDTO authentifier(AuthRequestDTO dto);
 }

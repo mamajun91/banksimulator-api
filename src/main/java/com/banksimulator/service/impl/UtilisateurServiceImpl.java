@@ -1,14 +1,18 @@
 package com.banksimulator.service.impl;
 
+import com.banksimulator.dto.envoie.AuthRequestDTO;
 import com.banksimulator.dto.envoie.PieceIdentiteRequestDTO;
 import com.banksimulator.dto.envoie.UtilisateurRequestDTO;
+import com.banksimulator.dto.reponse.AuthResponseDTO;
 import com.banksimulator.dto.reponse.PieceIdentiteResponseDTO;
 import com.banksimulator.dto.reponse.UtilisateurResponseDTO;
 import com.banksimulator.entities.PieceIdentite;
 import com.banksimulator.entities.Utilisateur;
 import com.banksimulator.enums.EntiteCible;
 import com.banksimulator.enums.StatutUtilisateur;
+import com.banksimulator.exception.CompteBloqueException;
 import com.banksimulator.exception.EmailDejaUtiliseException;
+import com.banksimulator.exception.MotDePasseDifferentException;
 import com.banksimulator.exception.UtilisateurNotFoundException;
 import com.banksimulator.mapper.PieceIdentiteMapper;
 import com.banksimulator.mapper.UtilisateurMapper;
@@ -16,6 +20,7 @@ import com.banksimulator.repository.PieceIdentiteRepository;
 import com.banksimulator.repository.UtilisateurRepository;
 import com.banksimulator.service.interfaces.IUtilisateurService;
 import io.quarkus.elytron.security.common.BcryptUtil;
+import io.smallrye.jwt.build.Jwt;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -40,6 +45,8 @@ public class UtilisateurServiceImpl implements IUtilisateurService {
 
     @Inject
     PieceIdentiteMapper pieceIdentiteMapper;
+
+    @Inject io.smallrye.jwt.build.JwtClaimsBuilder jwtClaimsBuilder;
 
     @Override
     @Transactional
@@ -171,4 +178,39 @@ public class UtilisateurServiceImpl implements IUtilisateurService {
 
         return pieceIdentiteMapper.toDTO(pieceIdentite);
     }
+
+    @Override
+    @Transactional
+    public AuthResponseDTO authentifier(AuthRequestDTO dto) {
+        Utilisateur utilisateur = utilisateurRepository.findByEmail(dto.email())
+                .orElseThrow(UtilisateurNotFoundException::new);
+
+        if (!BcryptUtil.matches(dto.motDePasse(), utilisateur.getMotDePasseHash())) {
+            utilisateur.setNbEchecsAuth(utilisateur.getNbEchecsAuth() + 1);
+
+            if (utilisateur.getNbEchecsAuth() >= 3) {
+                utilisateur.setStatut(StatutUtilisateur.BLOQUE);
+                auditTrailService.tracer(utilisateur.getId(),
+                        "ACTION_AUTH_ECHOUEE", EntiteCible.UTILISATEUR, utilisateur.getId());
+                throw new CompteBloqueException();
+            }
+            throw new MotDePasseDifferentException();
+        }
+
+        utilisateur.setNbEchecsAuth(0);
+
+        long expiresIn = 3600L;
+        String token = Jwt.issuer("banksimulator")
+                .upn(utilisateur.getEmail())
+                .groups(utilisateur.getRole().name())
+                .expiresIn(expiresIn)
+                .sign();
+
+        auditTrailService.tracer(utilisateur.getId(),
+                "ACTION_AUTH_REUSSIE", EntiteCible.UTILISATEUR, utilisateur.getId());
+
+        return new AuthResponseDTO(token, "Bearer", expiresIn,
+                utilisateur.getId(), utilisateur.getRole());
+    }
+
 }
