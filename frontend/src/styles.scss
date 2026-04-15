@@ -1,0 +1,38 @@
+@use '@angular/material' as mat;
+
+// themes BoursoBank
+:root {
+  --bourso-blue: #00A0E9;
+  --bourso-dark: #1A1A2E;
+  --bourso-light: #F5F7FA;
+  --bourso-green: #00C896;
+  --bourso-red: #FF4757;
+  --bourso-gray: #6B7280;
+  --bourso-card: #E8F5FD;
+  --bourso-border: #E2E8F0;
+}
+
+html {
+  height: 100%;
+  @include mat.theme((
+    color: (
+      primary: mat.$azure-palette,
+      tertiary: mat.$blue-palette,
+    ),
+    typography: Roboto,
+    density: 0,
+  ));
+}
+
+body {
+  color-scheme: light;
+  background-color: var(--bourso-light);
+  color: var(--bourso-dark);
+  font-family: Roboto, sans-serif;
+  margin: 0;
+  height: 100%;
+}
+
+* {
+  box-sizing: border-box;
+}
