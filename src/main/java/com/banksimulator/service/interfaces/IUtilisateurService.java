@@ -21,4 +21,5 @@ public interface IUtilisateurService{
     UtilisateurResponseDTO debloquer(UUID id);
     PieceIdentiteResponseDTO ajouterPieceIdentite(UUID id, PieceIdentiteRequestDTO pieceDto);
     AuthResponseDTO authentifier(AuthRequestDTO dto);
+    boolean verifyEmail(String email);
 }

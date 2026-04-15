@@ -23,4 +23,11 @@ public class AuthResource {
     public Response authentifier(@Valid AuthRequestDTO dto) {
         return Response.ok(utilisateurService.authentifier(dto)).build();
     }
+
+    @POST
+    @Path("/verifier-email")
+    public Response verifyEmail(String email) {
+        boolean existe = utilisateurService.verifyEmail(email);
+        return Response.ok(existe).build();
+    }
 }

@@ -213,4 +213,9 @@ public class UtilisateurServiceImpl implements IUtilisateurService {
                 utilisateur.getId(), utilisateur.getRole());
     }
 
+    @override
+    public boolean verifyEmail( String email) {
+        return utilisateurRepository.existsByEmail(email);
+    }
+
 }
